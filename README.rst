@@ -24,6 +24,10 @@ Then in all your code just add the following lines before importing matplotlib::
     from savefig import monkey_patch
     monkey_patch()
 
+To read the metadata from an existing image file, run::
+
+    python -m savefig /path/to/figure.png
+
 License
 -------
 
