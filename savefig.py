@@ -26,9 +26,6 @@ except ImportError:
     PdfFileReader = None
 
 
-QUIET = False
-
-
 # Save a reference to the matplotlib savefig implementation.
 mpl_savefig = Figure.savefig
 
@@ -36,11 +33,9 @@ mpl_savefig = Figure.savefig
 def get_git_info():
     # Check the status to see if there are any uncommitted changes.
     try:
-        status = check_output("git status -s", shell=True, stderr=PIPE)
+        diff = check_output("git diff", shell=True, stderr=PIPE)
     except CalledProcessError:
         return None
-    if not QUIET and len(status):
-        logging.warn("There have been changes since the last commit.")
 
     # Get the commit information.
     cmd = "git log -1 --date=iso8601 --format=\"format:%H || %ad || %an\""
@@ -52,8 +47,8 @@ def get_git_info():
     # Build the results dictionary and include changes if there are any.
     ret = dict(zip(["git-hash", "git-date", "git-author"],
                    result.split(" || ")))
-    if len(status):
-        ret["git-changes"] = ";".join(status.splitlines())
+    if len(diff):
+        ret["git-diff"] = diff
 
     return ret
 
@@ -135,11 +130,7 @@ def savefig(self, fn, *args, **kwargs):
     return mpl_savefig(self, fn, *args, **kwargs)
 
 
-def monkey_patch(quiet=False):
-    # Shut up, stupid warnings.
-    global QUIET
-    QUIET = quiet
-
+def monkey_patch():
     # Monkey patch matplotlib to call our savefig instead of the standard
     # version.
     savefig.__doc__ = mpl_savefig.__doc__
@@ -243,6 +234,7 @@ def test_pdf():
 
 if __name__ == "__main__":
     import sys
+    import argparse
 
     # Testing.
     if "--test" in sys.argv:
@@ -252,19 +244,29 @@ if __name__ == "__main__":
         test_pdf()
         sys.exit(0)
 
-    # Usage.
-    if len(sys.argv) != 2 or "-h" in sys.argv or "--help" in sys.argv:
-        print("Usage: {0} /path/to/image.png".format(sys.argv[0]))
-        sys.exit(0)
+    # Parse the command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename", help="The file to inspect")
+    parser.add_argument("-d", "--diff", action="store_true",
+                        help="Get the diff.")
+    args = parser.parse_args()
 
     # Get the file info.
-    info = get_file_info(sys.argv[1])
+    info = get_file_info(args.filename)
     if info is None:
-        print("Couldn't get info from file: {0}".format(sys.argv[1]))
+        print("Couldn't get info from file: {0}".format(args.filename))
         sys.exit(0)
 
+    # Show the diff if that was requested.
+    if args.diff:
+        if "git-diff" in info:
+            print(info["git-diff"])
+            sys.exit(0)
+        print("No diff found.")
+
     # Print the summary.
-    for k in ["git-hash", "git-date", "git-author", "git-changes"]:
+    keys = ["git-hash", "git-date", "git-author"]
+    for k in keys:
         v = info.get(k, None)
         if v is None:
             print("Missing key: '{0}'".format(k))
