@@ -31,6 +31,14 @@ mpl_savefig = Figure.savefig
 
 
 def get_git_info():
+    # Check the status to see if there are any uncommitted changes.
+    try:
+        status = check_output("git status -s", shell=True, stderr=PIPE)
+    except CalledProcessError:
+        return None
+    print(len(status))
+
+    # Get the commit information.
     cmd = "git log -1 --date=iso8601 --format=\"format:%H || %ad || %an\""
     try:
         result = check_output(cmd, shell=True, stderr=PIPE)
