@@ -6,6 +6,11 @@ This module monkey patches the ``savefig`` command from `matplotlib
 <http://matplotlib.org/>`_ and inserts your current git commit hash into
 the metadata of the saved file. Currently it supports PNG and PDF figures.
 
+.. image:: https://pypip.in/d/savefig/badge.png
+        :target: https://pypi.python.org/pypi/savefig/
+.. image:: https://pypip.in/v/savefig/badge.png
+        :target: https://pypi.python.org/pypi/savefig/
+
 Usage
 -----
 
@@ -33,7 +38,12 @@ which will give you something like::
     git-hash: 192a639c4a9eb7523e9becd23f359fd7d96e833f
     git-date: 2014-03-29 21:30:27 -0400
     git-author: Dan F-M
-    git-changes:  M savefig.py;M setup.py
+
+You can also get the diff between the saved commit hash and the version used
+to make the figure by running::
+
+    python -m savefig /path/to/figure.png --diff
+
 
 License
 -------
