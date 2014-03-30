@@ -33,7 +33,7 @@ which will give you something like::
     git-hash: 192a639c4a9eb7523e9becd23f359fd7d96e833f
     git-date: 2014-03-29 21:30:27 -0400
     git-author: Dan F-M
-    git-changes:  M savefig.py;?? dude.pdf;?? dude.png
+    git-changes:  M savefig.py;M setup.py
 
 License
 -------
