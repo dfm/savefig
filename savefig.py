@@ -20,6 +20,11 @@ try:
 except ImportError:
     Image = None
 
+try:
+    from PyPDF2 import PdfFileReader
+except ImportError:
+    PdfFileReader = None
+
 
 # Save a reference to the matplotlib savefig implementation.
 mpl_savefig = Figure.savefig
@@ -119,6 +124,24 @@ def monkey_patch():
     Figure.savefig = savefig
 
 
+def get_file_info(fn):
+    ext = os.path.splitext(fn)[1].lower()
+    if ext == ".png":
+        img = Image.open(fn)
+        return img.info
+    if ext == ".pdf":
+        with open(fn, "rb") as f:
+            pdf = PdfFileReader(f)
+            di = pdf.getDocumentInfo()
+            if "/Keywords" not in di:
+                return None
+            try:
+                return json.loads(di["/Keywords"])
+            except ValueError:
+                return None
+    return None
+
+
 def test_png():
     monkey_patch()
     import matplotlib.pyplot as pl
@@ -131,16 +154,14 @@ def test_png():
     with NamedTemporaryFile(suffix=".png") as f:
         fn = f.name
         pl.savefig(fn)
-        img = Image.open(fn)
-        info = img.info
+        info = get_file_info(fn)
         assert all([v == info[k] for k, v in git_info.items()])
 
     # Now try without a file extension.
     with NamedTemporaryFile(suffix=".png") as f:
         fn = f.name
         pl.savefig(os.path.splitext(fn)[0], format="png")
-        img = Image.open(fn)
-        info = img.info
+        info = get_file_info(fn)
         assert all([v == info[k] for k, v in git_info.items()])
 
     # If the default file-type is PNG, test that too.
@@ -149,15 +170,13 @@ def test_png():
     with NamedTemporaryFile(suffix=".png") as f:
         fn = f.name
         pl.savefig(os.path.splitext(fn)[0])
-        img = Image.open(fn)
-        info = img.info
+        info = get_file_info(fn)
         assert all([v == info[k] for k, v in git_info.items()])
 
 
 def test_pdf():
     monkey_patch()
     import matplotlib.pyplot as pl
-    from PyPDF2 import PdfFileReader
 
     # Get the current git info.
     git_info = get_git_info()
@@ -168,8 +187,7 @@ def test_pdf():
         with NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             fn = f.name
         pl.savefig(fn)
-        pdf = PdfFileReader(open(fn, "rb"))
-        info = json.loads(pdf.getDocumentInfo()["/Keywords"])
+        info = get_file_info(fn)
         assert all([v == info[k] for k, v in git_info.items()])
     finally:
         os.unlink(fn)
@@ -179,8 +197,7 @@ def test_pdf():
         with NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             fn = f.name
         pl.savefig(os.path.splitext(fn)[0], format="pdf")
-        pdf = PdfFileReader(open(fn, "rb"))
-        info = json.loads(pdf.getDocumentInfo()["/Keywords"])
+        info = get_file_info(fn)
         assert all([v == info[k] for k, v in git_info.items()])
     finally:
         os.unlink(fn)
@@ -192,13 +209,38 @@ def test_pdf():
         with NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             fn = f.name
         pl.savefig(os.path.splitext(fn)[0])
-        pdf = PdfFileReader(open(fn, "rb"))
-        info = json.loads(pdf.getDocumentInfo()["/Keywords"])
+        info = get_file_info(fn)
         assert all([v == info[k] for k, v in git_info.items()])
     finally:
         os.unlink(fn)
 
 
 if __name__ == "__main__":
-    test_png()
-    test_pdf()
+    import sys
+
+    # Testing.
+    if "--test" in sys.argv:
+        print("Testing PNG support...")
+        test_png()
+        print("Testing PDF support...")
+        test_pdf()
+        sys.exit(0)
+
+    # Usage.
+    if len(sys.argv) != 2 or "-h" in sys.argv or "--help" in sys.argv:
+        print("Usage: {0} /path/to/image.png".format(sys.argv[0]))
+        sys.exit(0)
+
+    # Get the file info.
+    info = get_file_info(sys.argv[1])
+    if info is None:
+        print("Couldn't get info from file: {0}".format(sys.argv[1]))
+        sys.exit(0)
+
+    # Print the summary.
+    for k in ["git-hash", "git-date", "git-author"]:
+        v = info.get("k", None)
+        if v is None:
+            print("Missing key: '{0}'".format(k))
+        else:
+            print("{0}: {1}".format(k, v))
