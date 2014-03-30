@@ -39,7 +39,7 @@ setup(
     description="Save matplotlib figures with embedded metadata for "
                 "reproducibility and profit",
     long_description=rd("README.rst"),
-    package_data={"": ["README.rst", "LICENSE", "AUTHORS.rst"]},
+    package_data={"": ["README.rst", "LICENSE"]},
     include_package_data=True,
     classifiers=[
         # "Development Status :: 5 - Production/Stable",
