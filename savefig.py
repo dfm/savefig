@@ -26,6 +26,9 @@ except ImportError:
     PdfFileReader = None
 
 
+QUIET = False
+
+
 # Save a reference to the matplotlib savefig implementation.
 mpl_savefig = Figure.savefig
 
@@ -36,7 +39,8 @@ def get_git_info():
         status = check_output("git status -s", shell=True, stderr=PIPE)
     except CalledProcessError:
         return None
-    print(len(status))
+    if not QUIET and len(status):
+        logging.warn("There have been changes since the last commit.")
 
     # Get the commit information.
     cmd = "git log -1 --date=iso8601 --format=\"format:%H || %ad || %an\""
@@ -44,8 +48,14 @@ def get_git_info():
         result = check_output(cmd, shell=True, stderr=PIPE)
     except CalledProcessError:
         return None
-    return dict(zip(["git-hash", "git-date", "git-author"],
-                    result.split(" || ")))
+
+    # Build the results dictionary and include changes if there are any.
+    ret = dict(zip(["git-hash", "git-date", "git-author"],
+                   result.split(" || ")))
+    if len(status):
+        ret["git-changes"] = ";".join(status.splitlines())
+
+    return ret
 
 
 def savefig_png(self, fn, *args, **kwargs):
@@ -125,7 +135,11 @@ def savefig(self, fn, *args, **kwargs):
     return mpl_savefig(self, fn, *args, **kwargs)
 
 
-def monkey_patch():
+def monkey_patch(quiet=False):
+    # Shut up, stupid warnings.
+    global QUIET
+    QUIET = quiet
+
     # Monkey patch matplotlib to call our savefig instead of the standard
     # version.
     savefig.__doc__ = mpl_savefig.__doc__
@@ -133,6 +147,10 @@ def monkey_patch():
 
 
 def get_file_info(fn):
+    """
+    Get the metadata stored in an image file returning ``None`` on failure.
+
+    """
     ext = os.path.splitext(fn)[1].lower()
     if ext == ".png":
         img = Image.open(fn)
@@ -246,8 +264,8 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # Print the summary.
-    for k in ["git-hash", "git-date", "git-author"]:
-        v = info.get("k", None)
+    for k in ["git-hash", "git-date", "git-author", "git-changes"]:
+        v = info.get(k, None)
         if v is None:
             print("Missing key: '{0}'".format(k))
         else:
