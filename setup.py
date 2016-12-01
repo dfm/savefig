@@ -41,6 +41,11 @@ setup(
     long_description=rd("README.rst"),
     package_data={"": ["README.rst", "LICENSE"]},
     include_package_data=True,
+    install_requires=[
+        'matplotlib',
+        'pypdf2',
+        'pillow',
+    ],
     classifiers=[
         # "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
