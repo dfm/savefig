@@ -6,10 +6,8 @@ This module monkey patches the ``savefig`` command from `matplotlib
 <http://matplotlib.org/>`_ and inserts your current git commit hash into
 the metadata of the saved file. Currently it supports PNG and PDF figures.
 
-.. image:: https://pypip.in/d/savefig/badge.png
-        :target: https://pypi.python.org/pypi/savefig/
-.. image:: https://pypip.in/v/savefig/badge.png
-        :target: https://pypi.python.org/pypi/savefig/
+.. image:: https://travis-ci.org/dfm/savefig.svg?branch=master
+        :target: https://travis-ci.org/dfm/savefig
 
 Usage
 -----
