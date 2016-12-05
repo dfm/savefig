@@ -30,7 +30,7 @@ else:
 
 setup(
     name="savefig",
-    version="0.0.2",
+    version="0.0.3",
     author="Daniel Foreman-Mackey",
     author_email="dan@dfm.io",
     py_modules=["savefig"],
