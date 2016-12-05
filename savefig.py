@@ -3,8 +3,6 @@
 
 from __future__ import division, print_function
 
-__all__ = ["savefig"]
-
 import os
 import json
 import logging
@@ -15,15 +13,23 @@ from matplotlib import rcParams
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_pdf import PdfPages
 
+# Optional write dependencies:
 try:
     from PIL import Image, PngImagePlugin
 except ImportError:
     Image = None
-
 try:
     from PyPDF2 import PdfFileReader
 except ImportError:
     PdfFileReader = None
+
+# Python 3
+try:
+    basestring
+except NameError:
+    basestring = (str, bytes)
+
+__all__ = ["savefig"]
 
 
 # Save a reference to the matplotlib savefig implementation.
@@ -33,14 +39,14 @@ mpl_savefig = Figure.savefig
 def get_git_info():
     # Check the status to see if there are any uncommitted changes.
     try:
-        diff = check_output("git diff", shell=True, stderr=PIPE)
+        diff = check_output("git diff", shell=True, stderr=PIPE).decode()
     except CalledProcessError:
         return None
 
     # Get the commit information.
     cmd = "git log -1 --date=iso8601 --format=\"format:%H || %ad || %an\""
     try:
-        result = check_output(cmd, shell=True, stderr=PIPE)
+        result = check_output(cmd, shell=True, stderr=PIPE).decode()
     except CalledProcessError:
         return None
 
@@ -64,7 +70,8 @@ def savefig_png(self, fn, *args, **kwargs):
 
     # If PIL isn't installed, we'll just call the standard savefig.
     if Image is None:
-        logging.warn("PIL must be installed to add metadata to PNG files.")
+        logging.warn(
+            "PIL or pillow must be installed to add metadata to PNG files.")
         return ret
 
     # Get the git commit information.
@@ -144,9 +151,15 @@ def get_file_info(fn):
     """
     ext = os.path.splitext(fn)[1].lower()
     if ext == ".png":
+        if Image is None:
+            raise ImportError("PIL or pillow must be installed to read "
+                              "metadata from PNG files.")
         img = Image.open(fn)
         return img.info
     if ext == ".pdf":
+        if PdfFileReader is None:
+            raise ImportError("PyPDF2 must be installed to read "
+                              "metadata from PDF files.")
         with open(fn, "rb") as f:
             pdf = PdfFileReader(f)
             di = pdf.getDocumentInfo()
