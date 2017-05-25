@@ -37,7 +37,7 @@ __all__ = ["savefig"]
 mpl_savefig = Figure.savefig
 
 
-def get_git_info(include_diff=True):
+def get_git_info(include_diff=False):
     # Check the status to see if there are any uncommitted changes.
     if include_diff:
         try:
@@ -62,7 +62,7 @@ def get_git_info(include_diff=True):
 
 
 def savefig_png(self, fn, *args, **kwargs):
-    include_diff = kwargs.pop("include_diff", True)
+    include_diff = kwargs.pop("include_diff", False)
 
     # This is a hack to deal with filenames without extensions. Not sure why
     # this is necessary.
@@ -94,7 +94,7 @@ def savefig_png(self, fn, *args, **kwargs):
 
 
 def savefig_pdf(self, fn, *args, **kwargs):
-    include_diff = kwargs.pop("include_diff", True)
+    include_diff = kwargs.pop("include_diff", False)
 
     # Get the git commit information.
     git_info = get_git_info(include_diff=include_diff)
@@ -143,7 +143,7 @@ def savefig(self, fn, *args, **kwargs):
     return mpl_savefig(self, fn, *args, **kwargs)
 
 
-def monkey_patch(include_diff=True):
+def monkey_patch(include_diff=False):
     # Monkey patch matplotlib to call our savefig instead of the standard
     # version.
     def sf(*args, **kwargs):
