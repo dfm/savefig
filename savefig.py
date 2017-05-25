@@ -6,6 +6,7 @@ from __future__ import division, print_function
 import os
 import json
 import logging
+from functools import partial
 from tempfile import NamedTemporaryFile
 from subprocess import check_output, CalledProcessError, PIPE
 
@@ -36,12 +37,13 @@ __all__ = ["savefig"]
 mpl_savefig = Figure.savefig
 
 
-def get_git_info():
+def get_git_info(include_diff=True):
     # Check the status to see if there are any uncommitted changes.
-    try:
-        diff = check_output("git diff", shell=True, stderr=PIPE).decode()
-    except CalledProcessError:
-        return None
+    if include_diff:
+        try:
+            diff = check_output("git diff", shell=True, stderr=PIPE).decode()
+        except CalledProcessError:
+            return None
 
     # Get the commit information.
     cmd = "git log -1 --date=iso8601 --format=\"format:%H || %ad || %an\""
@@ -53,13 +55,15 @@ def get_git_info():
     # Build the results dictionary and include changes if there are any.
     ret = dict(zip(["git-hash", "git-date", "git-author"],
                    result.split(" || ")))
-    if len(diff):
+    if include_diff and len(diff):
         ret["git-diff"] = diff
 
     return ret
 
 
 def savefig_png(self, fn, *args, **kwargs):
+    include_diff = kwargs.pop("include_diff", True)
+
     # This is a hack to deal with filenames without extensions. Not sure why
     # this is necessary.
     fn = os.path.splitext(fn)[0] + ".png"
@@ -75,7 +79,7 @@ def savefig_png(self, fn, *args, **kwargs):
         return ret
 
     # Get the git commit information.
-    git_info = get_git_info()
+    git_info = get_git_info(include_diff=include_diff)
     if git_info is None:
         return ret
 
@@ -90,8 +94,10 @@ def savefig_png(self, fn, *args, **kwargs):
 
 
 def savefig_pdf(self, fn, *args, **kwargs):
+    include_diff = kwargs.pop("include_diff", True)
+
     # Get the git commit information.
-    git_info = get_git_info()
+    git_info = get_git_info(include_diff=include_diff)
     if git_info is None:
         return mpl_savefig(self, fn, *args, **kwargs)
 
@@ -137,11 +143,14 @@ def savefig(self, fn, *args, **kwargs):
     return mpl_savefig(self, fn, *args, **kwargs)
 
 
-def monkey_patch():
+def monkey_patch(include_diff=True):
     # Monkey patch matplotlib to call our savefig instead of the standard
     # version.
-    savefig.__doc__ = mpl_savefig.__doc__
-    Figure.savefig = savefig
+    def sf(*args, **kwargs):
+        kwargs["include_diff"] = kwargs.get("include_diff", include_diff)
+        return savefig(*args, **kwargs)
+    sf.__doc__ = mpl_savefig.__doc__
+    Figure.savefig = sf
 
 
 def get_file_info(fn):
